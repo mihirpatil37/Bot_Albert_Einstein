@@ -29,7 +29,7 @@ function addMessage(text, role){
   const wrap = document.createElement('div');
   wrap.className = `message ${role === 'assistant' ? 'bot' : 'user'}`;
   wrap.innerHTML = role === 'assistant'
-    ? `<div class="message__avatar">Albert</div><div class="message__body"><div class="message__bubble">${text}</div><div class="message__meta">Albert Einstein · now</div></div>`
+    ? `<div class="message__avatar">AE</div><div class="message__body"><div class="message__bubble">${text}</div><div class="message__meta">Albert Einstein · now</div></div>`
     : `<div class="message__avatar">You</div><div class="message__body"><div class="message__bubble">${text}</div><div class="message__meta">You · now</div></div>`;
   messages.appendChild(wrap);
   messages.scrollTop = messages.scrollHeight;
@@ -68,15 +68,64 @@ form.addEventListener('submit', async (e) => {
   const loading = addMessage('Thinking carefully...', 'assistant');
 
   try {
-    const res = await fetch('/api/chat', {
+    const res = await fetch('/api/chat/stream', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: text, history })
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Request failed');
-    loading.textContent = data.reply;
-    history.push({ role: 'assistant', content: data.reply });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Request failed');
+    }
+
+    // Clear the "Thinking carefully..." placeholder
+    loading.textContent = ''; 
+
+    // Initialize stream readers
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let fullResponse = "";
+    let buffer = "";
+
+    // Process the stream chunk by chunk
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      
+      // SSE events are separated by a double newline
+      const parts = buffer.split('\n\n');
+      // Keep the last incomplete chunk in the buffer
+      buffer = parts.pop();
+
+      for (const part of parts) {
+        if (part.startsWith('data: ')) {
+          const dataStr = part.slice(6).trim();
+          
+          if (dataStr === '[DONE]') {
+            continue;
+          }
+          
+          try {
+            const dataObj = JSON.parse(dataStr);
+            if (dataObj.token) {
+              fullResponse += dataObj.token;
+              loading.textContent = fullResponse;
+              // Auto-scroll as text arrives
+              messages.scrollTop = messages.scrollHeight; 
+            }
+          } catch (err) {
+            console.error("Failed to parse stream chunk:", err, dataStr);
+          }
+        }
+      }
+    }
+
+    // Add the final complete response to history
+    history.push({ role: 'assistant', content: fullResponse });
+
   } catch (err) {
     loading.textContent = `Error: ${err.message}`;
   }

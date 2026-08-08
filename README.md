@@ -33,7 +33,7 @@ The third screen shows a longer answer inside the chat area, demonstrating scrol
 
 ```text
 .
-├── main.py
+├── app.py
 ├── templates
 │   └── index.html
 ├── static
@@ -59,7 +59,7 @@ pip install -r requirements.txt
 4. Run the app:
 
 ```bash
-uvicorn main:app --reload
+uvicorn app:app --reload
 ```
 
 ## Notes

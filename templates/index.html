@@ -28,7 +28,7 @@
       }
     }
   </script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', path='styles.css') }}">
 </head>
 <body class="bg-cream text-cocoa">
   <main class="page mx-auto max-w-[1280px] min-h-screen grid grid-cols-[320px_1fr] gap-4 p-6">
@@ -42,9 +42,9 @@
       </div>
 
       <div class="panel note bg-[rgba(255,255,255,.35)] border border-[#e3d8c7] rounded-2xl p-4">
-       <img src="{{ url_for('static', filename='images/Albert_Einstein_Head_cleaned.jpg.webp') }}"
-      alt="Albert Einstein portrait"
-      class="w-full rounded-2xl border border-[#e3d8c7] shadow-soft object-cover mb-3">
+        <img src="{{ url_for('static', path='images/Albert_Einstein_Head_cleaned.jpg.webp') }}"
+             alt="Albert Einstein portrait"
+             class="w-full rounded-2xl border border-[#e3d8c7] shadow-soft object-cover mb-3">
 
         <div id="quote-box" class="mt-4 p-4 rounded-xl border border-[#e3d8c7] bg-[rgba(255,255,255,.45)]">
           <div class="text-[.78rem] uppercase tracking-[.12em] text-muted font-semibold">Einstein quote</div>
@@ -58,6 +58,8 @@
         <button class="quick-btn px-4 py-3 rounded-full border border-[#e3d8c7] bg-[rgba(255,255,255,.45)] text-left hover:bg-[rgba(201,100,66,.10)] transition" data-prompt="Why is curiosity important in science?">Curiosity in science</button>
         <button class="quick-btn px-4 py-3 rounded-full border border-[#e3d8c7] bg-[rgba(255,255,255,.45)] text-left hover:bg-[rgba(201,100,66,.10)] transition" data-prompt="How should I study physics deeply?">Study physics deeply</button>
       </div>
+
+      
     </aside>
 
     <section class="chat-panel bg-sand border border-[#e3d8c7] rounded-2xl shadow-soft overflow-hidden grid grid-rows-[auto_1fr_auto]" id="chat">
@@ -89,6 +91,6 @@
       </form>
     </section>
   </main>
-  <script src="{{ url_for('static', filename='app.js') }}"></script>
+  <script src="{{ url_for('static', path='app.js') }}"></script>
 </body>
 </html>
