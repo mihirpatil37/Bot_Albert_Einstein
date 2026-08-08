@@ -25,15 +25,43 @@ function setRandomQuote() {
   quoteText.textContent = `“${quotes[randomIndex]}” — Albert Einstein`;
 }
 
+// --- NEW RENDERING ENGINE ---
+function renderMarkdownAndMath(element, text) {
+  // 1. Parse Markdown and sanitize HTML
+  const rawHtml = marked.parse(text);
+  const cleanHtml = DOMPurify.sanitize(rawHtml);
+  element.innerHTML = cleanHtml;
+
+  // 2. Render Math using KaTeX Auto-Render
+  renderMathInElement(element, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '\\[', right: '\\]', display: true},
+      {left: '$', right: '$', display: false},
+      {left: '\\(', right: '\\)', display: false}
+    ],
+    throwOnError: false, // Prevents errors from halting rendering
+    ignoredClasses: ["message__meta"] // Don't try to parse math in our metadata tags
+  });
+}
+
 function addMessage(text, role){
   const wrap = document.createElement('div');
   wrap.className = `message ${role === 'assistant' ? 'bot' : 'user'}`;
+  
+  // Create the skeleton
   wrap.innerHTML = role === 'assistant'
-    ? `<div class="message__avatar">AE</div><div class="message__body"><div class="message__bubble">${text}</div><div class="message__meta">Albert Einstein · now</div></div>`
-    : `<div class="message__avatar">You</div><div class="message__body"><div class="message__bubble">${text}</div><div class="message__meta">You · now</div></div>`;
+    ? `<div class="message__avatar">AE</div><div class="message__body"><div class="message__bubble"></div><div class="message__meta">Albert Einstein · now</div></div>`
+    : `<div class="message__avatar">You</div><div class="message__body"><div class="message__bubble"></div><div class="message__meta">You · now</div></div>`;
+  
   messages.appendChild(wrap);
+  
+  // Render the actual content safely
+  const bubble = wrap.querySelector('.message__bubble');
+  renderMarkdownAndMath(bubble, text);
+  
   messages.scrollTop = messages.scrollHeight;
-  return wrap.querySelector('.message__bubble');
+  return bubble;
 }
 
 async function health(){
@@ -65,7 +93,7 @@ form.addEventListener('submit', async (e) => {
   history.push({ role: 'user', content: text });
   input.value = '';
 
-  const loading = addMessage('Thinking carefully...', 'assistant');
+  const bubble = addMessage('Thinking carefully...', 'assistant');
 
   try {
     const res = await fetch('/api/chat/stream', {
@@ -75,59 +103,61 @@ form.addEventListener('submit', async (e) => {
     });
 
     if (!res.ok) {
-      const errorData = await res.json().catch(() => ({}));
-      throw new Error(errorData.error || 'Request failed');
+      const data = await res.json();
+      throw new Error(data.error || 'Request failed');
     }
 
-    // Clear the "Thinking carefully..." placeholder
-    loading.textContent = ''; 
-
-    // Initialize stream readers
     const reader = res.body.getReader();
-    const decoder = new TextDecoder("utf-8");
-    let fullResponse = "";
-    let buffer = "";
+    const decoder = new TextDecoder('utf-8');
+    let done = false;
+    let assistantReply = '';
+    let isFirstToken = true;
+    let buffer = '';
 
-    // Process the stream chunk by chunk
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
+    while (!done) {
+      const { value, done: readerDone } = await reader.read();
+      done = readerDone;
       
-      // SSE events are separated by a double newline
-      const parts = buffer.split('\n\n');
-      // Keep the last incomplete chunk in the buffer
-      buffer = parts.pop();
+      if (value) {
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop();
 
-      for (const part of parts) {
-        if (part.startsWith('data: ')) {
-          const dataStr = part.slice(6).trim();
-          
-          if (dataStr === '[DONE]') {
-            continue;
-          }
-          
-          try {
-            const dataObj = JSON.parse(dataStr);
-            if (dataObj.token) {
-              fullResponse += dataObj.token;
-              loading.textContent = fullResponse;
-              // Auto-scroll as text arrives
-              messages.scrollTop = messages.scrollHeight; 
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const dataStr = line.substring(6).trim();
+            if (dataStr === '[DONE]') {
+              done = true;
+              break;
             }
-          } catch (err) {
-            console.error("Failed to parse stream chunk:", err, dataStr);
+
+            try {
+              const parsed = JSON.parse(dataStr);
+              if (parsed.token) {
+                if (isFirstToken) {
+                  bubble.textContent = ''; // Clear 'Thinking...'
+                  isFirstToken = false;
+                }
+                
+                assistantReply += parsed.token;
+                
+                // Use the new render function for real-time streaming updates
+                renderMarkdownAndMath(bubble, assistantReply);
+                
+                messages.scrollTop = messages.scrollHeight;
+              }
+            } catch (err) {
+              console.error('Error parsing stream chunk:', err, dataStr);
+            }
           }
         }
       }
     }
-
-    // Add the final complete response to history
-    history.push({ role: 'assistant', content: fullResponse });
+    
+    history.push({ role: 'assistant', content: assistantReply });
 
   } catch (err) {
-    loading.textContent = `Error: ${err.message}`;
+    bubble.textContent = `Error: ${err.message}`;
   }
 });
 
@@ -139,7 +169,9 @@ input.addEventListener('keydown', (e) => {
 });
 
 clearBtn.addEventListener('click', () => {
-  messages.innerHTML = '<div class="assistant-line max-w-[760px] grid gap-1"><div class="assistant-label text-[.8rem] text-muted font-[\'Sentient\'] uppercase tracking-[.12em]">Albert Einstein</div><div class="assistant-text font-[\'Sentient\'] text-[1.08rem] leading-7">Good day. Let us begin with a clear question.</div></div>';
+  // Replaced hardcoded HTML with standard setup to ensure styles match
+  messages.innerHTML = '';
+  addMessage('Good day. Let us begin with a clear question.', 'assistant');
   history.length = 0;
   setRandomQuote();
 });

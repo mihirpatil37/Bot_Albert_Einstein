@@ -29,6 +29,14 @@
     }
   </script>
   <link rel="stylesheet" href="{{ url_for('static', path='styles.css') }}">
+  <!-- KaTeX CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  
+  <!-- DOMPurify, Marked.js, and KaTeX Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 </head>
 <body class="bg-cream text-cocoa">
   <main class="page mx-auto max-w-[1280px] min-h-screen grid grid-cols-[320px_1fr] gap-4 p-6">
