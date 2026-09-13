@@ -5,8 +5,8 @@ services:
       - "8000:8000"
     environment:
       - OLLAMA_HOST=http://ollama:11434
-      - OLLAMA_MODEL=llama3.2
-      - DATABASE_URL=postgresql://einstein:relativity2024@db:5432/chat_history
+      - OLLAMA_MODEL=${OLLAMA_MODEL}
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
     depends_on:
       - ollama
       - db
@@ -23,9 +23,9 @@ services:
   db:
     image: postgres:15-alpine
     environment:
-      - POSTGRES_USER=einstein
-      - POSTGRES_PASSWORD=relativity2024
-      - POSTGRES_DB=chat_history
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
